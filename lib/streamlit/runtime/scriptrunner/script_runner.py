@@ -94,6 +94,18 @@ it in the future.
 """
 
 
+def count_spaces_before_first_character(line):
+    count = 0
+    for char in line:
+        if char == " ":
+            count += 1
+        elif char == "\t":
+            count += 4
+        else:
+            break  # Exit the loop when a non-space character is found
+    return count
+
+
 class ScriptRunner:
     def __init__(
         self,
@@ -421,6 +433,8 @@ class ScriptRunner:
 
         if rerun_data.page_script_hash:
             current_page_info = pages.get(rerun_data.page_script_hash, None)
+            print("This is the case. A")
+            print(current_page_info)
         elif not rerun_data.page_script_hash and rerun_data.page_name:
             # If a user navigates directly to a non-main page of an app, we get
             # the first script run request before the list of pages has been
@@ -437,10 +451,14 @@ class ScriptRunner:
                 ),
                 None,
             )
+            print("This is the case. B")
+            print(current_page_info)
         else:
             # If no information about what page to run is given, default to
             # running the main page.
             current_page_info = main_page_info
+            print("This is the case. C")
+            print(current_page_info)
 
         page_script_hash = (
             current_page_info["page_script_hash"]
@@ -538,6 +556,45 @@ class ScriptRunner:
 
                 ctx.on_script_start()
                 prep_time = timer() - start_time
+                print("This is the code.")
+                print(code)
+                source_file = open(code.co_filename, "r")
+                lines_of_code = source_file.readlines()
+                source_file.close()
+                first_line_of_code = lines_of_code[0]
+
+                # Print the first line of code
+
+                if (
+                    first_line_of_code[:-1].strip() == "# streamlit: ignore".strip()
+                ) and rerun_data.page_script_hash:
+                    # print("Here!")
+
+                    # print("".join(lines_of_code))
+
+                    filtered_lines = []
+                    in_class_block = False
+                    spaces = 0
+
+                    for line in lines_of_code:
+                        if in_class_block:
+                            if count_spaces_before_first_character(line) <= spaces:
+                                in_class_block = False
+                                spaces = 0
+                        else:
+                            if line.strip().startswith("class "):
+                                in_class_block = True
+                                spaces = count_spaces_before_first_character(line)
+                            else:
+                                filtered_lines.append(line)
+
+                    # Join the filtered lines to create the modified first line of code
+                    code = "".join(filtered_lines)
+                    print(code)
+
+                    # Print the first line of code
+                    # print("Here again!")
+                    # print(new_code)
                 exec(code, module.__dict__)
                 self._session_state.maybe_check_serializable()
                 self._session_state[SCRIPT_RUN_WITHOUT_ERRORS_KEY] = True
